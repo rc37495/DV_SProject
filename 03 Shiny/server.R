@@ -16,6 +16,7 @@ shinyServer(function(input, output) {
   KPI_Low_Max_value <- reactive({input$KPI1})     
   KPI_Medium_Max_value <- reactive({input$KPI2})
   
+  eventReactive(input$clicks1, {
   ds <- data.frame(fromJSON(getURL(URLencode('skipper.cs.utexas.edu:5001/rest/native/?query="select * from SEX_OFFENDERS"'),httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_rc37495', PASS='orcl_rc37495', MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON'), verbose = TRUE), ))
   
   ds$AGE <- as.numeric(as.character(ds$AGE))
@@ -28,10 +29,12 @@ shinyServer(function(input, output) {
   no_ds = ddply(no_ds, .(GENDER,RACE), summarize, mean=mean(AGE))
   no_ds[,'mean']=round(no_ds[,'mean'],2)
   
-  eventReactive(input$clicks1, {yes_ds = within(yes_ds, {
+  yes_ds = within(yes_ds, {
     KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})
   no_ds = within(no_ds, {
-    KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})})
+    KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})
+  
+  })
   
   output$distPlot1 <- renderPlot({
     yes_plot <- ggplot() + 
