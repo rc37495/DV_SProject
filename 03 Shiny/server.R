@@ -28,58 +28,58 @@ shinyServer(function(input, output) {
   no_ds = ddply(no_ds, .(GENDER,RACE), summarize, mean=mean(AGE))
   no_ds[,'mean']=round(no_ds[,'mean'],2)
   
-  yes_ds <- eventReactive(input$clicks1, {within(yes_ds, {
-    KPI = ifelse(ds$mean < KPI_Low_Max_value, "Younger", ifelse(ds$mean < KPI_Medium_Max_value, "Middle", "Older"))})})
-  no_ds <- eventReactive(input$clicks1, {within(no_ds, {
-    KPI = ifelse(ds$mean < KPI_Low_Max_value, "Younger", ifelse(ds$mean < KPI_Medium_Max_value, "Middle", "Older"))})})
+  eventReactive(input$clicks1, {yes_ds = within(yes_ds, {
+    KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})
+  no_ds = within(no_ds, {
+    KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})})
   
-  output$distplot1 <- renderPlot({
-  yes_plot <- ggplot() + 
-    coord_cartesian() + 
-    scale_x_discrete() +
-    scale_y_discrete() +
-    labs(title='Victim Minor') +
-    labs(x=("Gender"), y=("Race")) +
-    layer(data=yes_ds(), 
-          mapping=aes(x=GENDER, y=RACE, label=mean),
-          stat="identity", 
-          stat_params=list(), 
-          geom="text",
-          geom_params=list(colour="black"), 
-          position=position_identity()
-    ) +
-    layer(data=yes_ds(), 
-          mapping=aes(x=GENDER, y=RACE, fill=KPI), 
-          stat="identity", 
-          stat_params=list(), 
-          geom="tile",
-          geom_params=list(alpha=0.50), 
-          position=position_identity()
-    )
-  
-  no_plot <- ggplot() + 
-    coord_cartesian() + 
-    scale_x_discrete() +
-    scale_y_discrete() +
-    labs(title='Victim Not Minor') +
-    labs(x=("Gender"), y=("Race")) +
-    layer(data=no_ds(), 
-          mapping=aes(x=GENDER, y=RACE, label=mean),
-          stat="identity", 
-          stat_params=list(), 
-          geom="text",
-          geom_params=list(colour="black"),
-          position=position_identity()
-    ) +
-    layer(data=no_ds(), 
-          mapping=aes(x=GENDER, y=RACE, fill=KPI), 
-          stat="identity", 
-          stat_params=list(), 
-          geom="tile",
-          geom_params=list(alpha=0.50), 
-          position=position_identity()
-    )
-  
+  output$distPlot1 <- renderPlot({
+    yes_plot <- ggplot() + 
+      coord_cartesian() + 
+      scale_x_discrete() +
+      scale_y_discrete() +
+      labs(title='Victim Minor') +
+      labs(x=("Gender"), y=("Race")) +
+      layer(data=yes_ds, 
+            mapping=aes(x=GENDER, y=RACE, label=mean),
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black"), 
+            position=position_identity()
+      ) +
+      layer(data=yes_ds, 
+            mapping=aes(x=GENDER, y=RACE, fill=KPI), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="tile",
+            geom_params=list(alpha=0.50), 
+            position=position_identity()
+      )
+    
+    no_plot <- ggplot() + 
+      coord_cartesian() + 
+      scale_x_discrete() +
+      scale_y_discrete() +
+      labs(title='Victim Not Minor') +
+      labs(x=("Gender"), y=("Race")) +
+      layer(data=no_ds, 
+            mapping=aes(x=GENDER, y=RACE, label=mean),
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black"),
+            position=position_identity()
+      ) +
+      layer(data=no_ds, 
+            mapping=aes(x=GENDER, y=RACE, fill=KPI), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="tile",
+            geom_params=list(alpha=0.50), 
+            position=position_identity()
+      )
+    
     plot <- grid.arrange(yes_plot, no_plot)
     plot
   })
