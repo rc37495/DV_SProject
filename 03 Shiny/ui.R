@@ -22,7 +22,6 @@ dashboardPage(
                           min = 1, max = 35,  value = 35),
               sliderInput("KPI2", "KPI_Medium_Max_value:", 
                           min = 35, max = 50,  value = 50),
-              actionButton(inputId = "clicks1",  label = "Click me"),
               plotOutput("distPlot1")
       ),
       
@@ -34,7 +33,6 @@ dashboardPage(
       
       # Third tab content
       tabItem(tabName = "barchart",
-              actionButton(inputId = "clicks3",  label = "Click me"),
               plotOutput("distPlot3")
       )
     )

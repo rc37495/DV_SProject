@@ -13,30 +13,33 @@ require("gridExtra")
 
 shinyServer(function(input, output) {
   
-  KPI_Low_Max_value <- reactive({input$KPI1})     
-  KPI_Medium_Max_value <- reactive({input$KPI2})
-  
-  eventReactive(input$clicks1, {
-  ds <- data.frame(fromJSON(getURL(URLencode('skipper.cs.utexas.edu:5001/rest/native/?query="select * from SEX_OFFENDERS"'),httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_rc37495', PASS='orcl_rc37495', MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON'), verbose = TRUE), ))
-  
-  ds$AGE <- as.numeric(as.character(ds$AGE))
-  
-  yes_ds <- subset(ds, ds$VICTIM_MINOR=="Y")
-  yes_ds = ddply(yes_ds, .(GENDER,RACE), summarize, mean=mean(AGE))
-  yes_ds[,'mean']=round(yes_ds[,'mean'],2)
-  
-  no_ds <- subset(ds, ds$VICTIM_MINOR=="N")
-  no_ds = ddply(no_ds, .(GENDER,RACE), summarize, mean=mean(AGE))
-  no_ds[,'mean']=round(no_ds[,'mean'],2)
-  
-  yes_ds = within(yes_ds, {
-    KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})
-  no_ds = within(no_ds, {
-    KPI = ifelse(ds$mean < KPI_Low_Max_value(), "Younger", ifelse(ds$mean < KPI_Medium_Max_value(), "Middle", "Older"))})
-  
-  })
-  
   output$distPlot1 <- renderPlot({
+    # Start your code here.
+    
+    # The following is equivalent to KPI Story 2 Sheet 2 and Parameters Story 3 in "Crosstabs, KPIs, Barchart.twb"
+    
+    KPI_Low_Max_value <- reactive({input$KPI1})     
+    KPI_Medium_Max_value <- reactive({input$KPI2})
+    
+    ds <- data.frame(fromJSON(getURL(URLencode('skipper.cs.utexas.edu:5001/rest/native/?query="select * from SEX_OFFENDERS"'),httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_rc37495', PASS='orcl_rc37495', MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON'), verbose = TRUE), ))
+    
+    ds$AGE <- as.numeric(as.character(ds$AGE))
+    
+    # Make subset datasets - split by if victim is minor
+    yes_ds <- subset(ds, ds$VICTIM_MINOR=="Y")
+    yes_ds = ddply(yes_ds, .(GENDER,RACE), summarize, mean=mean(AGE))
+    yes_ds[,'mean']=round(yes_ds[,'mean'],2)
+    
+    no_ds <- subset(ds, ds$VICTIM_MINOR=="N")
+    no_ds = ddply(no_ds, .(GENDER,RACE), summarize, mean=mean(AGE))
+    no_ds[,'mean']=round(no_ds[,'mean'],2)
+    
+    # add column of low-med-hig ratings with respect to KPI measures
+    yes_ds = within(yes_ds, {
+      KPI = ifelse(mean < KPI_Low_Max_value(), "Younger", ifelse(mean < KPI_Medium_Max_value(), "Middle", "Older"))})
+    no_ds = within(no_ds, {
+      KPI = ifelse(mean < KPI_Low_Max_value(), "Younger", ifelse(mean < KPI_Medium_Max_value(), "Middle", "Older"))})
+    
     yes_plot <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
@@ -83,12 +86,13 @@ shinyServer(function(input, output) {
             position=position_identity()
       )
     
+    # make cross-tab for rapists without minor victims
     plot <- grid.arrange(yes_plot, no_plot)
-    plot
-  })
-  
-  observeEvent(input$clicks, {
-    print(as.numeric(input$clicks))
+    
+    
+    # End your code here.
+    return(plot)
+    
   })
   
   # Begin code for Second Tab:
@@ -130,10 +134,42 @@ shinyServer(function(input, output) {
   
   # Begin code for Third Tab:
   
-  df3 <- eventReactive(input$clicks3, {})
+  df3 <- data.frame(fromJSON(getURL(URLencode('skipper.cs.utexas.edu:5001/rest/native/?query="select * from SEX_OFFENDERS"'),httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_rc37495', PASS='orcl_rc37495', MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON'), verbose = TRUE), ))
   
-  output$distPlot3 <- renderPlot(height=1000, width=2000, {
-    plot3 <- ggplot()
-    plot3
+  df3$AGE <- as.numeric(as.character(df3$AGE))
+  
+  sds = ddply(df3, .(GENDER,RACE), summarize, mean_age=mean(AGE))
+  ssds = ddply(df3,~GENDER,summarise,avg_age=mean(AGE))
+  
+  sds <- na.omit(sds)
+  sds <- sds[sds$RACE!="UNKNOWN",]
+  ssds <- na.omit(ssds)
+  
+  sds <- inner_join (sds, ssds, by = "GENDER")
+  
+  output$distPlot3 <- renderPlot(height=650, width=700, {
+    
+    plot3 <- ggplot() + 
+      coord_cartesian() +
+      scale_x_discrete() + 
+      scale_y_continuous() +
+      facet_wrap(~GENDER, ncol = 1) +
+      labs(title = 'Gender / Race') +
+      labs(x = paste("RACE"), y = paste("AVG.AGE")) +
+      #annotate("text", x=1.0, y=500, colour="#00BFC4", label = "41.74") + 
+      #annotate("text", x=3.0, y=43, colour="#F8766D", label = "45.08")
+      layer(data = sds,
+            mapping = aes(x = RACE, y = mean_age, fill = GENDER),
+            stat = "identity",
+            stat_params = list(), 
+            geom = "bar"
+      ) +
+      layer(data = sds, 
+            mapping = aes(yintercept = avg_age), 
+            geom= "hline",
+            geom_params = list(color = "black")
+      )
+    
+  plot3
   })
 })
